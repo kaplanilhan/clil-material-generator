@@ -5,7 +5,7 @@
       <v-col cols="12">
         <v-card elevation="1" color="primary" class="text-white pa-4 rounded-lg">
           <v-card-title class="text-h5 font-weight-medium">
-            Willkommen zurück! 
+            Willkommen zurück<span v-if="profile.name">, {{ profile.name }}</span>!
           </v-card-title>
           <v-card-text class="pb-2">
             <p class="text-body-1">Erstellen Sie CLIL-Unterrichtsmaterialien mit KI-Unterstützung für Ihre Technik-Klassen.</p>
@@ -183,6 +183,8 @@ const router = useRouter();
 const materialsStore = useMaterialsStore();
 const templatesStore = useTemplatesStore();
 const uiStore = useUIStore();
+// Dummy-Profil (kann später aus Auth-Store kommen)
+const profile = { name: 'Max Mustermann' };
 
 // Ladezustände
 const loading = computed(() => materialsStore.loading || templatesStore.loading);
