@@ -18,6 +18,14 @@
             <v-icon start>mdi-content-save</v-icon>
             Speichern
         </v-btn>
+        <v-btn color="info" variant="text" @click="handlePreview">
+          <v-icon start>mdi-eye</v-icon>
+          Vorschau
+        </v-btn>
+        <v-btn color="secondary" @click="handleExport">
+          <v-icon start>mdi-export</v-icon>
+          Exportieren
+        </v-btn>
     </v-toolbar>
 
     <v-row>
@@ -28,6 +36,9 @@
             v-else-if="material"
             v-model="editableContent"
             @save-status="updateSaveStatus"
+            :language-level="editableLanguageLevel"
+            :vocab-percentage="editableVocabPercentage"
+            :enable-clil-tools="true"
           />
           <v-alert v-else type="error">
               Material konnte nicht geladen werden.
@@ -104,7 +115,11 @@
                 <div class="text-caption">
                     Zuletzt geändert: {{ formatDate(material.modified) }}
                 </div>
-
+                <v-divider class="my-3"></v-divider>
+                <v-btn block variant="text" @click="showVersionHistory = true">
+                  <v-icon start>mdi-history</v-icon>
+                  Änderungsverlauf anzeigen
+                </v-btn>
            </v-card-text>
            <v-divider></v-divider>
            <v-card-actions>
@@ -134,6 +149,41 @@
       </v-card>
     </v-dialog>
 
+    <ExportDialog
+      v-model="exportDialog"
+      :material="material"
+      :metadata="{
+        type: editableType,
+        subject: editableSubject,
+        languageLevel: editableLanguageLevel,
+        vocabPercentage: editableVocabPercentage
+      }"
+    />
+    <v-snackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      timeout="3000"
+    >
+      {{ snackbar.text }}
+    </v-snackbar>
+    <v-dialog v-model="showPreview" fullscreen>
+      <v-card>
+        <v-toolbar density="compact">
+          <v-btn icon @click="showPreview = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+          <v-toolbar-title>Vorschau: {{ editableTitle }}</v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" @click="showPreview = false">
+            Zurück zum Bearbeiten
+          </v-btn>
+        </v-toolbar>
+        <v-card-text>
+          <div class="preview-content" v-html="editableContent"></div>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
   </div>
 </template>
 
@@ -141,11 +191,21 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMaterialsStore } from '@/stores/materials';
+import { useUIStore } from '@/stores/ui';
 import MaterialEditor from '@/components/Editor/MaterialEditor.vue';
+import ExportDialog from '@/components/ExportDialog.vue';
+import {
+  getIconForType,
+  getIconColor,
+  getMaterialTypeTitle,
+  formatDate,
+  MATERIAL_TYPES
+} from '@/utils/materialUtils';
 
 const route = useRoute();
 const router = useRouter();
 const materialsStore = useMaterialsStore();
+const uiStore = useUIStore();
 
 const loading = ref(true);
 const material = ref(null);
@@ -155,23 +215,36 @@ const editableType = ref('');
 const editableSubject = ref('');
 const editableLanguageLevel = ref('B1');
 const editableVocabPercentage = ref(30);
-const saveStatus = ref('saved'); // Synced with editor's status
+const editableTags = ref([]);
+const availableTags = ref(['CLIL', 'Technik', 'Quiz', 'Glossar', 'Präsentation', 'Video']);
+const saveStatus = ref('saved');
 const confirmDeleteDialog = ref(false);
 const deleting = ref(false);
 const titleSaveTimeout = ref(null);
+const contentSaveTimeout = ref(null);
+const exportDialog = ref(false);
+const showPreview = ref(false);
+const showVersionHistory = ref(false);
+const snackbar = ref({ show: false, text: '', color: 'success' });
 
-// Fetch material data when component mounts
+// Globale Materialtypen aus Utils
+const materialTypes = computed(() =>
+  Object.entries(MATERIAL_TYPES).map(([id, config]) => ({ id, title: config.title }))
+);
+const subjects = [
+  'Informatik', 'Elektrotechnik', 'Maschinenbau', 'Mechatronik', 'Netzwerktechnik', 'Elektronik', 'Datenbanken', 'Webentwicklung', 'Mathematik', 'Physik'
+];
+const languageLevels = [
+  { title: 'A1', value: 'A1' }, { title: 'A2', value: 'A2' }, { title: 'B1', value: 'B1' }, { title: 'B2', value: 'B2' }, { title: 'C1', value: 'C1' }
+];
+
+// Material laden
 onMounted(async () => {
   loading.value = true;
   const materialId = route.params.id;
-  // Try to get from store first
   material.value = materialsStore.getMaterialById(materialId);
   if (!material.value) {
-    // If not in store (e.g., direct navigation), try fetching (if API exists)
-    // For mock, we assume it must be in the store if valid
     console.warn(`Material with ID ${materialId} not found in store.`);
-    // Optionally redirect or show error
-    // router.push('/materials');
   }
   if(material.value) {
       editableContent.value = material.value.content || '';
@@ -180,30 +253,15 @@ onMounted(async () => {
       editableSubject.value = material.value.subject || '';
       editableLanguageLevel.value = material.value.language?.level || 'B1';
       editableVocabPercentage.value = material.value.language?.vocabPercentage || 30;
+      editableTags.value = material.value.tags || [];
   }
   loading.value = false;
 });
 
-// Data for selects (could be fetched or defined globally)
-const materialTypes = [
-  { id: 'worksheet', title: 'Arbeitsblatt' },
-  { id: 'quiz', title: 'Quiz' },
-  { id: 'glossary', title: 'Glossar' },
-  // Add other types
-];
-const subjects = [
-  'Informatik', 'Elektrotechnik', 'Maschinenbau', 'Mechatronik', 'Netzwerktechnik', 'Elektronik', 'Datenbanken', 'Webentwicklung', 'Mathematik', 'Physik'
-];
-const languageLevels = [
-  { title: 'A1', value: 'A1' }, { title: 'A2', value: 'A2' }, { title: 'B1', value: 'B1' }, { title: 'B2', value: 'B2' }, { title: 'C1', value: 'C1' }
-];
-
-// Update save status from editor component
+// Save-Status-Logik
 const updateSaveStatus = (status) => {
   saveStatus.value = status;
 };
-
-// Computed properties for save status display
 const saveStatusText = computed(() => {
     switch(saveStatus.value) {
         case 'saved': return 'Gespeichert';
@@ -232,8 +290,6 @@ const saveStatusColor = computed(() => {
     }
 });
 
-// --- Metadata Saving --- //
-
 const markUnsaved = () => {
     if (saveStatus.value === 'saved') {
         saveStatus.value = 'unsaved';
@@ -242,20 +298,17 @@ const markUnsaved = () => {
 
 const saveMetadata = async (field, value) => {
     if (!material.value) return;
-    markUnsaved(); // Mark as unsaved first
+    markUnsaved();
     saveStatus.value = 'saving';
     try {
         let updateData = { id: material.value.id };
-        // Handle nested language object
         if (field.startsWith('language.')) {
             const langField = field.split('.')[1];
             updateData.language = { ...material.value.language, [langField]: value };
         } else {
             updateData[field] = value;
         }
-
         await materialsStore.updateMaterial(updateData);
-        // Update local ref *after* successful save
         if (field.startsWith('language.')) {
              const langField = field.split('.')[1];
              if (material.value.language) material.value.language[langField] = value;
@@ -263,76 +316,105 @@ const saveMetadata = async (field, value) => {
             material.value[field] = value;
         }
         saveStatus.value = 'saved';
+        showFeedback('Metadaten gespeichert', 'success');
+        if (field !== 'tags') uiStore.setLastEditedMaterial(material.value.id);
     } catch (error) {
         console.error(`Error saving metadata field ${field}:`, error);
         saveStatus.value = 'error';
-         // Show error message to user
+        showFeedback('Fehler beim Speichern!', 'error');
     }
 };
 
-// Debounced title saving
+// Debounced Title-Save
 const saveTitle = () => {
     if (titleSaveTimeout.value) clearTimeout(titleSaveTimeout.value);
     titleSaveTimeout.value = setTimeout(() => {
         if (material.value && editableTitle.value !== material.value.title) {
             saveMetadata('title', editableTitle.value);
-        } else if (saveStatus.value === 'unsaved') {
-             // If only title changed and is now back to original, mark as saved
-             // This needs more robust checking if other fields could be unsaved
-             // saveStatus.value = 'saved';
         }
-    }, 800); // Debounce delay
+    }, 800);
 };
-
 watch(editableTitle, () => {
     markUnsaved();
     if (titleSaveTimeout.value) clearTimeout(titleSaveTimeout.value);
-    // Start timer on input change
     titleSaveTimeout.value = setTimeout(saveTitle, 1500);
 });
 
+// Auto-Save für Editor-Inhalt
+const saveContent = async () => {
+  if (material.value && editableContent.value !== material.value.content) {
+    saveStatus.value = 'saving';
+    try {
+      await materialsStore.updateMaterial({
+        id: material.value.id,
+        content: editableContent.value
+      });
+      material.value.content = editableContent.value;
+      saveStatus.value = 'saved';
+      showFeedback('Inhalt gespeichert', 'success');
+      uiStore.setLastEditedMaterial(material.value.id);
+    } catch (error) {
+      console.error('Error auto-saving content:', error);
+      saveStatus.value = 'error';
+      showFeedback('Fehler beim automatischen Speichern!', 'error');
+    }
+  }
+};
+watch(editableContent, () => {
+  markUnsaved();
+  if (contentSaveTimeout.value) clearTimeout(contentSaveTimeout.value);
+  contentSaveTimeout.value = setTimeout(saveContent, 2000);
+});
 
-// Trigger save (e.g., by button click)
+// Export-Dialog
+const handleExport = () => {
+  exportDialog.value = true;
+};
+
+// Vorschau
+const handlePreview = () => {
+  showPreview.value = true;
+};
+
+// Snackbar Feedback
+const showFeedback = (text, color = 'success') => {
+  snackbar.value = { show: true, text, color };
+};
+
+// Force Save
 const forceSave = async () => {
     if (!material.value) return;
     saveStatus.value = 'saving';
     try {
         await materialsStore.updateMaterial({
             id: material.value.id,
-            content: editableContent.value, // Save latest content
-            title: editableTitle.value, // Ensure title is saved too
-             // Include other potentially changed metadata if needed
+            content: editableContent.value,
+            title: editableTitle.value,
+            tags: editableTags.value
         });
         saveStatus.value = 'saved';
+        showFeedback('Material gespeichert', 'success');
+        uiStore.setLastEditedMaterial(material.value.id);
     } catch (error) {
-        console.error("Error force saving:", error);
+        console.error('Error force saving:', error);
         saveStatus.value = 'error';
+        showFeedback('Fehler beim Speichern!', 'error');
     }
 }
 
-// Delete material
+// Delete
 const deleteMaterial = async () => {
   if (!material.value) return;
   deleting.value = true;
   try {
     await materialsStore.deleteMaterial(material.value.id);
     confirmDeleteDialog.value = false;
-    router.push('/materials'); // Navigate back to list after deletion
+    router.push('/materials');
   } catch (error) {
-    console.error("Error deleting material:", error);
-    // Show error message
+    console.error('Error deleting material:', error);
+    showFeedback('Fehler beim Löschen!', 'error');
   } finally {
     deleting.value = false;
-  }
-};
-
-// Helper to format date
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A';
-  try {
-      return new Date(dateString).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
-  } catch (e) {
-      return dateString; // Return original if parsing fails
   }
 };
 

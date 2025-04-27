@@ -12,297 +12,256 @@
           :items="steps"
           flat
           alt-labels
+          hide-actions
         >
-          <template v-slot:header>
-            <v-stepper-header>
-              <template v-for="(step, index) in steps" :key="index">
-                <v-stepper-item
-                  :value="index + 1"
-                  :title="step.title"
-                  :subtitle="step.subtitle"
-                  :complete="currentStep > index + 1"
-                  :error="hasStepError(index)"
-                  :editable="currentStep > index + 1"
-                  @click="currentStep = index + 1"
-                ></v-stepper-item>
+          
+        </v-stepper>
 
-                <v-divider v-if="index < steps.length - 1"></v-divider>
-              </template>
-            </v-stepper-header>
-          </template>
-
-          <v-stepper-window>
-            <v-stepper-window-item :value="1">
-               <v-container fluid>
-                  <v-row>
-                    <v-col cols="12">
-                      <h3 class="text-h6 mb-4">Wählen Sie einen Material-Typ</h3>
-                    </v-col>
-
-                    <v-col
-                      v-for="type in materialTypes"
-                      :key="type.id"
-                      cols="12"
-                      sm="6"
-                      md="4"
-                    >
-                      <v-card
-                        :color="form.type === type.id ? `${type.color}-lighten-4` : 'grey-lighten-4'"
-                        :variant="form.type === type.id ? 'outlined' : 'elevated'" 
-                        class="h-100 d-flex flex-column text-center pa-4 rounded-lg"
-                        @click="selectMaterialType(type.id)"
-                        hover
-                        :elevation="form.type === type.id ? 0 : 2"
-                        :style="form.type === type.id ? `border: 2px solid var(--v-theme-${type.color});` : ''"
-                      >
-                        <v-avatar
-                          :color="type.color"
-                          size="56"
-                          class="mb-4 mx-auto"
-                        >
-                          <v-icon color="white" size="x-large">{{ type.icon }}</v-icon>
-                        </v-avatar>
-                        <v-card-title class="text-subtitle-1 font-weight-bold">{{ type.title }}</v-card-title>
-                        <v-card-subtitle class="text-caption">{{ type.description }}</v-card-subtitle>
-                      </v-card>
-                    </v-col>
-                  </v-row>
-
-                  <v-alert
-                    v-if="v$.type.$invalid && v$.type.$dirty"
-                    type="error"
-                    variant="tonal"
-                    class="mt-4"
-                    density="compact"
-                  >
-                    Bitte wählen Sie einen Material-Typ aus, bevor Sie fortfahren.
-                  </v-alert>
-               </v-container>
-            </v-stepper-window-item>
-
-            <v-stepper-window-item :value="2">
-              <v-container fluid>
-                <v-row>
-                  <v-col cols="12">
-                    <h3 class="text-h6 mb-4">Thema und Fach</h3>
-                  </v-col>
-
-                  <v-col cols="12" md="6">
-                    <v-autocomplete
-                      v-model="form.subject"
-                      :items="subjects"
-                      label="Fach"
-                      placeholder="Wählen Sie ein Fach"
-                      prepend-inner-icon="mdi-book-open-variant"
-                      :error-messages="v$.subject.$errors.map(e => e.$message)"
-                      @blur="v$.subject.$touch()"
-                      variant="outlined"
-                      density="compact"
-                      chips
-                      clearable
-                    ></v-autocomplete>
-                  </v-col>
-
-                  <v-col cols="12" md="6">
-                    <v-text-field
-                      v-model="form.topic"
-                      label="Thema"
-                      placeholder="Geben Sie das konkrete Thema an"
-                      prepend-inner-icon="mdi-tag"
-                      :error-messages="v$.topic.$errors.map(e => e.$message)"
-                      @blur="v$.topic.$touch()"
-                      variant="outlined"
-                      density="compact"
-                      clearable
-                    ></v-text-field>
-                  </v-col>
-
-                  <v-col cols="12">
-                    <v-textarea
-                      v-model="form.description"
-                      label="Detaillierte Beschreibung (optional)"
-                      placeholder="Beschreiben Sie das Thema genauer, um bessere Ergebnisse zu erhalten..."
-                      prepend-inner-icon="mdi-text-box-outline"
-                      variant="outlined"
-                      rows="3"
-                      auto-grow
-                      density="compact"
-                    ></v-textarea>
-                  </v-col>
-                </v-row>
-
+        <!-- Schritt-Inhalte ohne Stepper-Window -->
+        <div v-if="currentStep === 1">
+          <!-- Schritt 1 Inhalt -->
+          <v-container fluid>
+            <v-row>
+              <v-col cols="12">
+                <h3 class="text-h6 mb-4">Wählen Sie einen Material-Typ</h3>
+              </v-col>
+              <v-col v-for="type in materialTypes" :key="type.id" cols="12" sm="6" md="4">
+                <v-card
+                  :color="form.type === type.id ? `${type.color}-lighten-4` : 'grey-lighten-4'"
+                  :variant="form.type === type.id ? 'outlined' : 'elevated'"
+                  class="h-100 d-flex flex-column text-center pa-4 rounded-lg"
+                  @click="selectMaterialType(type.id)"
+                  hover
+                  :elevation="form.type === type.id ? 0 : 2"
+                  :style="form.type === type.id ? `border: 2px solid var(--v-theme-${type.color});` : ''"
+                >
+                  <v-avatar :color="type.color" size="56" class="mb-4 mx-auto">
+                    <v-icon color="white" size="x-large">{{ type.icon }}</v-icon>
+                  </v-avatar>
+                  <v-card-title class="text-subtitle-1 font-weight-bold">{{ type.title }}</v-card-title>
+                  <v-card-subtitle class="text-caption">{{ type.description }}</v-card-subtitle>
+                </v-card>
+              </v-col>
+            </v-row>
+            <v-alert
+              v-if="v$.type.$invalid && v$.type.$dirty"
+              type="error"
+              variant="tonal"
+              class="mt-4"
+              density="compact"
+            >
+              Bitte wählen Sie einen Material-Typ aus, bevor Sie fortfahren.
+            </v-alert>
+          </v-container>
+        </div>
+        <div v-else-if="currentStep === 2">
+          <!-- Schritt 2 Inhalt -->
+          <v-container fluid>
+            <v-row>
+              <v-col cols="12">
+                <h3 class="text-h6 mb-4">Thema und Fach</h3>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-autocomplete
+                  v-model="form.subject"
+                  :items="subjects"
+                  label="Fach"
+                  placeholder="Wählen Sie ein Fach"
+                  prepend-inner-icon="mdi-book-open-variant"
+                  :error-messages="v$.subject.$errors.map(e => e.$message)"
+                  @blur="v$.subject.$touch()"
+                  variant="outlined"
+                  density="compact"
+                  chips
+                  clearable
+                ></v-autocomplete>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="form.topic"
+                  label="Thema"
+                  placeholder="Geben Sie das konkrete Thema an"
+                  prepend-inner-icon="mdi-tag"
+                  :error-messages="v$.topic.$errors.map(e => e.$message)"
+                  @blur="v$.topic.$touch()"
+                  variant="outlined"
+                  density="compact"
+                  clearable
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12">
+                <v-textarea
+                  v-model="form.description"
+                  label="Detaillierte Beschreibung (optional)"
+                  placeholder="Beschreiben Sie das Thema genauer, um bessere Ergebnisse zu erhalten..."
+                  prepend-inner-icon="mdi-text-box-outline"
+                  variant="outlined"
+                  rows="3"
+                  auto-grow
+                  density="compact"
+                ></v-textarea>
+              </v-col>
+            </v-row>
+            <v-alert
+              v-if="(v$.subject.$invalid || v$.topic.$invalid) && (v$.subject.$dirty || v$.topic.$dirty)"
+              type="error"
+              variant="tonal"
+              class="mt-4"
+              density="compact"
+            >
+              Bitte füllen Sie alle erforderlichen Felder in diesem Schritt aus, bevor Sie fortfahren.
+            </v-alert>
+          </v-container>
+        </div>
+        <div v-else-if="currentStep === 3">
+          <!-- Schritt 3 Inhalt -->
+          <v-container fluid>
+            <v-row>
+              <v-col cols="12">
+                <h3 class="text-h6 mb-4">CLIL-Parameter</h3>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="form.languageLevel"
+                  :items="languageLevels"
+                  label="Sprachniveau"
+                  prepend-inner-icon="mdi-translate"
+                  variant="outlined"
+                  density="compact"
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-slider
+                  v-model="form.vocabPercentage"
+                  :min="10"
+                  :max="50"
+                  :step="5"
+                  label="Fachvokabular-Anteil (% der Schlüsselwörter)"
+                  color="primary"
+                  thumb-label="always"
+                  show-ticks="always"
+                  :ticks="{10: '10%', 20: '20%', 30: '30%', 40: '40%', 50: '50%'}"
+                >
+                  <template v-slot:append>
+                    <v-chip size="small" color="primary" label>
+                      {{ form.vocabPercentage }}%
+                    </v-chip>
+                  </template>
+                </v-slider>
+              </v-col>
+              <v-col cols="12">
+                <v-select
+                  v-model="form.contentFocus"
+                  :items="contentFocusOptions"
+                  label="Inhaltlicher Fokus"
+                  prepend-inner-icon="mdi-target"
+                  variant="outlined"
+                  density="compact"
+                ></v-select>
+              </v-col>
+              <v-col cols="12">
+                <v-switch
+                  v-model="form.includeVocabList"
+                  color="primary"
+                  label="Vokabelliste am Ende hinzufügen"
+                  hide-details
+                  inset
+                ></v-switch>
+              </v-col>
+            </v-row>
+          </v-container>
+        </div>
+        <div v-else-if="currentStep === 4">
+          <!-- Schritt 4 Inhalt -->
+          <v-container fluid>
+            <v-row>
+              <v-col cols="12">
+                <h3 class="text-h6 mb-4">Prompt anpassen (optional)</h3>
                 <v-alert
-                  v-if="(v$.subject.$invalid || v$.topic.$invalid) && (v$.subject.$dirty || v$.topic.$dirty)"
-                  type="error"
+                  color="info"
                   variant="tonal"
-                  class="mt-4"
+                  icon="mdi-information-outline"
+                  class="mb-4 text-body-2"
                   density="compact"
                 >
-                  Bitte füllen Sie alle erforderlichen Felder in diesem Schritt aus, bevor Sie fortfahren.
+                  Sie können den generierten Prompt anpassen, um speziellere Anforderungen zu erfüllen.
+                  Dieser Schritt ist optional.
                 </v-alert>
-              </v-container>
-            </v-stepper-window-item>
-
-             <v-stepper-window-item :value="3">
-              <v-container fluid>
-                <v-row>
-                  <v-col cols="12">
-                    <h3 class="text-h6 mb-4">CLIL-Parameter</h3>
-                  </v-col>
-
-                  <v-col cols="12" md="6">
-                    <v-select
-                      v-model="form.languageLevel"
-                      :items="languageLevels"
-                      label="Sprachniveau"
-                      prepend-inner-icon="mdi-translate"
-                      variant="outlined"
-                      density="compact"
-                    ></v-select>
-                  </v-col>
-
-                  <v-col cols="12" md="6">
-                    <v-slider
-                      v-model="form.vocabPercentage"
-                      :min="10"
-                      :max="50"
-                      :step="5"
-                      label="Fachvokabular-Anteil (% der Schlüsselwörter)"
-                      color="primary"
-                      thumb-label="always"
-                      show-ticks="always"
-                      :ticks="{10: '10%', 20: '20%', 30: '30%', 40: '40%', 50: '50%'}"
-                    >
-                      <template v-slot:append>
-                        <v-chip size="small" color="primary" label>
-                          {{ form.vocabPercentage }}%
-                        </v-chip>
+              </v-col>
+              <v-col cols="12">
+                <v-textarea
+                  v-model="generatedPrompt"
+                  label="Generierter Prompt"
+                  prepend-inner-icon="mdi-code-braces"
+                  variant="outlined"
+                  rows="10"
+                  auto-grow
+                  :readonly="!editPrompt"
+                ></v-textarea>
+                <v-btn variant="text" size="small" @click="editPrompt = !editPrompt">
+                  <v-icon start>{{ editPrompt ? 'mdi-lock-open-outline' : 'mdi-pencil-outline' }}</v-icon>
+                  {{ editPrompt ? 'Bearbeitung sperren' : 'Prompt bearbeiten' }}
+                </v-btn>
+              </v-col>
+            </v-row>
+          </v-container>
+        </div>
+        <div v-else-if="currentStep === 5">
+          <!-- Schritt 5 Inhalt -->
+          <v-container fluid>
+            <v-row justify="center">
+              <v-col cols="12" md="8">
+                <h3 class="text-h6 mb-4 text-center">Zusammenfassung & Generierung</h3>
+                <v-card variant="outlined" class="mb-4">
+                  <v-list lines="two" density="compact">
+                    <v-list-item>
+                      <template v-slot:prepend>
+                        <v-icon color="primary">mdi-file-outline</v-icon>
                       </template>
-                    </v-slider>
-                  </v-col>
-
-                  <v-col cols="12">
-                    <v-select
-                      v-model="form.contentFocus"
-                      :items="contentFocusOptions"
-                      label="Inhaltlicher Fokus"
-                      prepend-inner-icon="mdi-target"
-                      variant="outlined"
-                      density="compact"
-                    ></v-select>
-                  </v-col>
-
-                  <v-col cols="12">
-                    <v-switch
-                      v-model="form.includeVocabList"
-                      color="primary"
-                      label="Vokabelliste am Ende hinzufügen"
-                      hide-details
-                      inset
-                    ></v-switch>
-                  </v-col>
-                </v-row>
-              </v-container>
-            </v-stepper-window-item>
-
-            <v-stepper-window-item :value="4">
-              <v-container fluid>
-                <v-row>
-                  <v-col cols="12">
-                    <h3 class="text-h6 mb-4">Prompt anpassen (optional)</h3>
-                    <v-alert
-                      color="info"
-                      variant="tonal"
-                      icon="mdi-information-outline"
-                      class="mb-4 text-body-2"
-                      density="compact"
-                    >
-                      Sie können den generierten Prompt anpassen, um speziellere Anforderungen zu erfüllen.
-                      Dieser Schritt ist optional.
-                    </v-alert>
-                  </v-col>
-
-                  <v-col cols="12">
-                    <v-textarea
-                      v-model="generatedPrompt"
-                      label="Generierter Prompt"
-                      prepend-inner-icon="mdi-code-braces"
-                      variant="outlined"
-                      rows="10" 
-                      auto-grow
-                      :readonly="!editPrompt"
-                    ></v-textarea>
-                    <v-btn variant="text" size="small" @click="editPrompt = !editPrompt">
-                      <v-icon start>{{ editPrompt ? 'mdi-lock-open-outline' : 'mdi-pencil-outline' }}</v-icon>
-                      {{ editPrompt ? 'Bearbeitung sperren' : 'Prompt bearbeiten' }}
-                    </v-btn>
-                  </v-col>
-                </v-row>
-              </v-container>
-            </v-stepper-window-item>
-
-            <v-stepper-window-item :value="5">
-              <v-container fluid>
-                <v-row justify="center">
-                  <v-col cols="12" md="8">
-                    <h3 class="text-h6 mb-4 text-center">Zusammenfassung & Generierung</h3>
-                    <v-card variant="outlined" class="mb-4">
-                      <v-list lines="two" density="compact">
-                        <v-list-item>
-                          <template v-slot:prepend>
-                            <v-icon color="primary">mdi-file-outline</v-icon>
-                          </template>
-                          <v-list-item-title>Material-Typ</v-list-item-title>
-                          <v-list-item-subtitle>
-                            {{ getMaterialTypeName(form.type) }}
-                          </v-list-item-subtitle>
-                        </v-list-item>
-
-                        <v-divider inset></v-divider>
-
-                        <v-list-item>
-                          <template v-slot:prepend>
-                            <v-icon color="primary">mdi-book-open-variant</v-icon>
-                          </template>
-                          <v-list-item-title>Fach & Thema</v-list-item-title>
-                          <v-list-item-subtitle>
-                            {{ form.subject }}: {{ form.topic }}
-                          </v-list-item-subtitle>
-                        </v-list-item>
-
-                        <v-divider inset></v-divider>
-
-                        <v-list-item>
-                          <template v-slot:prepend>
-                            <v-icon color="primary">mdi-translate</v-icon>
-                          </template>
-                          <v-list-item-title>CLIL-Parameter</v-list-item-title>
-                          <v-list-item-subtitle>
-                            Sprachniveau: {{ form.languageLevel }}, Fachvokabular: {{ form.vocabPercentage }}%
-                          </v-list-item-subtitle>
-                        </v-list-item>
-                      </v-list>
-                    </v-card>
-
-                    <div class="text-center">
-                       <v-btn
-                          color="primary"
-                          @click="generateMaterial"
-                          :loading="generating"
-                          :disabled="generating || !canGenerate"
-                          size="large"
-                          class="mt-4"
-                        >
-                          <v-icon start>mdi-creation</v-icon>
-                          Material generieren
-                        </v-btn>
-                    </div>
-                  </v-col>
-                </v-row>
-              </v-container>
-            </v-stepper-window-item>
-          </v-stepper-window>
-        </v-stepper>
+                      <v-list-item-title>Material-Typ</v-list-item-title>
+                      <v-list-item-subtitle>
+                        {{ getMaterialTypeName(form.type) }}
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                    <v-divider inset></v-divider>
+                    <v-list-item>
+                      <template v-slot:prepend>
+                        <v-icon color="primary">mdi-book-open-variant</v-icon>
+                      </template>
+                      <v-list-item-title>Fach & Thema</v-list-item-title>
+                      <v-list-item-subtitle>
+                        {{ form.subject }}: {{ form.topic }}
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                    <v-divider inset></v-divider>
+                    <v-list-item>
+                      <template v-slot:prepend>
+                        <v-icon color="primary">mdi-translate</v-icon>
+                      </template>
+                      <v-list-item-title>CLIL-Parameter</v-list-item-title>
+                      <v-list-item-subtitle>
+                        Sprachniveau: {{ form.languageLevel }}, Fachvokabular: {{ form.vocabPercentage }}%
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </v-card>
+                <div class="text-center">
+                  <v-btn
+                    color="primary"
+                    @click="generateMaterial"
+                    :loading="generating"
+                    :disabled="generating || !canGenerate"
+                    size="large"
+                    class="mt-4"
+                  >
+                    <v-icon start>mdi-creation</v-icon>
+                    Material generieren
+                  </v-btn>
+                </div>
+              </v-col>
+            </v-row>
+          </v-container>
+        </div>
       </v-card-text>
 
       <!-- Actions sind jetzt im Stepper -->
@@ -385,6 +344,14 @@
             <v-icon start>mdi-pencil-outline</v-icon>
             Prompt anpassen
           </v-btn>
+          <v-btn
+            variant="text"
+            @click="handleExport"
+            :disabled="!generatedMaterial"
+          >
+            <v-icon start>mdi-export</v-icon>
+            Exportieren
+          </v-btn>
           <v-spacer></v-spacer>
           <v-btn
             variant="text"
@@ -405,18 +372,30 @@
       </v-card>
     </v-dialog>
 
+    <ExportDialog
+      v-model="exportDialog"
+      :material="generatedMaterial"
+      :metadata="{
+        type: form.type,
+        subject: form.subject,
+        topic: form.topic,
+        languageLevel: form.languageLevel,
+        vocabPercentage: form.vocabPercentage
+      }"
+    />
+
      <v-snackbar
-      v-model="errorSnackbar.show"
+      v-model="snackbar.show"
       :timeout="5000"
-      color="error"
+      :color="snackbar.color"
       location="top right"
       multi-line
     >
-      {{ errorSnackbar.message }}
+      {{ snackbar.message }}
       <template v-slot:actions>
         <v-btn
           variant="text"
-          @click="errorSnackbar.show = false"
+          @click="snackbar.show = false"
         >
           Schließen
         </v-btn>
@@ -430,13 +409,21 @@
 import { ref, computed, watch, reactive, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useVuelidate } from '@vuelidate/core';
-import { required, minLength, helpers } from '@vuelidate/validators';
+import { required, minLength, helpers, between } from '@vuelidate/validators';
 import { useMaterialsStore } from '@/stores/materials';
+import { useTemplatesStore } from '@/stores/templates';
+import { useUIStore } from '@/stores/ui';
 import geminiApi from '@/services/gemini-api';
+import ExportDialog from '@/components/ExportDialog.vue';
 
 const router = useRouter();
 const route = useRoute();
 const materialsStore = useMaterialsStore();
+const templatesStore = useTemplatesStore();
+const uiStore = useUIStore();
+
+const snackbar = ref({ show: false, message: '', color: 'success' });
+const exportDialog = ref(false);
 
 // Stepper steps
 const steps = [
@@ -468,6 +455,16 @@ const rules = computed(() => {
       required: helpers.withMessage('Bitte geben Sie ein Thema an.', required),
       minLength: helpers.withMessage('Das Thema muss mindestens 3 Zeichen lang sein.', minLength(3)) 
     },
+    languageLevel: { 
+      required: helpers.withMessage('Bitte wählen Sie ein Sprachniveau.', required)
+    },
+    vocabPercentage: {
+      required: helpers.withMessage('Bitte geben Sie einen Vokabular-Anteil an.', required),
+      between: helpers.withMessage('Der Vokabular-Anteil muss zwischen 10% und 50% liegen.', between(10, 50))
+    },
+    contentFocus: {
+      required: helpers.withMessage('Bitte wählen Sie einen inhaltlichen Fokus.', required)
+    }
   };
 });
 
@@ -512,8 +509,8 @@ const saving = ref(false);
 const previewDialog = ref(false);
 const generatedMaterial = ref(null);
 const editPrompt = ref(false);
-const generationError = ref(null);
-const errorSnackbar = reactive({ show: false, message: '' });
+const isGeneratingPrompt = ref(false);
+let lastPromptParams = '';
 
 // Computed property to check if current step has validation errors
 const hasStepError = (index) => {
@@ -572,35 +569,39 @@ const prevStep = () => {
   }
 };
 
-// Generate prompt text based on form data
-const generatePromptText = () => {
-  if (!form.value.type || !form.value.topic || !form.value.subject) {
+// Race-Condition-Schutz für Prompt-Generierung
+const generatePromptText = async () => {
+  if (isGeneratingPrompt.value) return;
+  try {
+    isGeneratingPrompt.value = true;
+    const params = JSON.stringify(form.value);
+    lastPromptParams = params;
+    if (!form.value.type || !form.value.topic || !form.value.subject) {
       generatedPrompt.value = "Bitte füllen Sie die Felder für Typ, Fach und Thema aus, um den Prompt zu generieren.";
       return;
-  }
-  
-  generatedPrompt.value = `Erstelle ein ${getMaterialTypeName(form.value.type)} zum Thema "${form.value.topic}" für das Fach "${form.value.subject}" mit folgendem CLIL-Ansatz:
+    }
+    const promptTemplate = `Erstelle ein ${getMaterialTypeName(form.value.type)} zum Thema "${form.value.topic}" für das Fach "${form.value.subject}" mit folgendem CLIL-Ansatz:
 
 - Zielgruppe: Schüler/Studenten mit Sprachniveau ${form.value.languageLevel}
 - Fachvokabular: Betone wichtige Fachbegriffe (ca. ${form.value.vocabPercentage}% der relevanten Termini).
 - Fokus: ${form.value.contentFocus === 'balanced' ? 'Lege Wert auf ein ausgewogenes Verhältnis zwischen Fachinhalt und sprachlicher Unterstützung.' :
           form.value.contentFocus === 'content' ? 'Konzentriere dich primär auf die korrekte Darstellung des Fachinhalts.' : 'Priorisiere den Spracherwerb durch Vereinfachungen und zusätzliche Erklärungen.'}
-${form.value.description ? `
-Zusätzliche Details zum Inhalt:
-${form.value.description}` : ''}
-${form.value.includeVocabList ? `
-- Füge am Ende eine Vokabelliste mit den wichtigsten Fachbegriffen und einfachen Erklärungen hinzu.` : ''}
+${form.value.description ? `\nZusätzliche Details zum Inhalt:\n${form.value.description}` : ''}
+${form.value.includeVocabList ? `\n- Füge am Ende eine Vokabelliste mit den wichtigsten Fachbegriffen und einfachen Erklärungen hinzu.` : ''}
 
 Struktur und Formatierung:
 - Verwende klare Überschriften und Absätze.
 - Hebe wichtige Informationen hervor (z.B. durch Fettdruck).
 - Integriere, falls passend für den Materialtyp (${getMaterialTypeName(form.value.type)}), Aufgaben, Fragen oder Beispiele.`;
-};
-
-// Function to display errors
-const showError = (message) => {
-  errorSnackbar.message = message;
-  errorSnackbar.show = true;
+    // Nur übernehmen, wenn die Parameter noch aktuell sind
+    if (lastPromptParams === JSON.stringify(form.value)) {
+      generatedPrompt.value = promptTemplate;
+    }
+  } catch (error) {
+    handleError(error, 'generatePromptText');
+  } finally {
+    isGeneratingPrompt.value = false;
+  }
 };
 
 // Generate material using the mock API
@@ -612,7 +613,7 @@ const generateMaterialAction = async () => {
   // Validate form before generating
   const isValid = await v$.value.$validate();
   if (!isValid) {
-      showError('Bitte überprüfen Sie Ihre Eingaben in den vorherigen Schritten.');
+      handleError(new Error('Bitte überprüfen Sie Ihre Eingaben in den vorherigen Schritten.'));
       generating.value = false;
       return;
   }
@@ -633,12 +634,12 @@ const generateMaterialAction = async () => {
       previewDialog.value = true;
     } else {
       generationError.value = response.error || 'Unbekannter Fehler bei der Generierung.';
-      showError(`Fehler bei der Generierung: ${generationError.value}`);
+      handleError(`Fehler bei der Generierung: ${generationError.value}`);
     }
   } catch (error) {
     console.error('API Error:', error);
     generationError.value = error.message || 'Netzwerkfehler oder API nicht erreichbar.';
-    showError(`API Fehler: ${generationError.value}`);
+    handleError(`API Fehler: ${generationError.value}`);
   } finally {
     generating.value = false;
   }
@@ -653,13 +654,32 @@ const regenerateMaterial = () => {
     generateMaterialAction();
 };
 
-// Save the generated material
-const saveMaterial = async () => {
-  if (!generatedMaterial.value || !!generationError.value) {
-    showError('Kann Material nicht speichern, da die Generierung fehlgeschlagen ist.');
+// Export-Dialog
+const handleExport = () => {
+  if (!generatedMaterial.value) {
+    handleError(new Error('Kein Material zum Exportieren verfügbar.'));
     return;
   }
-  
+  exportDialog.value = true;
+};
+
+// Snackbar Feedback
+const showFeedback = (message, color = 'success') => {
+  snackbar.value = { show: true, message, color };
+};
+
+// Verbesserte Fehlerbehandlung
+const handleError = (error, context = '') => {
+  console.error(`Error in ${context}:`, error);
+  showFeedback(error.message || 'Ein unerwarteter Fehler ist aufgetreten.', 'error');
+};
+
+// Nach dem Speichern UI-Store aktualisieren
+const saveMaterial = async () => {
+  if (!generatedMaterial.value) {
+    handleError(new Error('Kann Material nicht speichern, da die Generierung fehlgeschlagen ist.'));
+    return;
+  }
   saving.value = true;
   try {
     const newMaterialData = {
@@ -671,16 +691,21 @@ const saveMaterial = async () => {
         level: form.value.languageLevel,
         vocabPercentage: form.value.vocabPercentage
       },
-      tags: [form.value.subject.toLowerCase(), form.value.topic.toLowerCase().split(' ')[0]]
+      tags: [form.value.subject.toLowerCase(), form.value.topic.toLowerCase().split(' ')[0]],
+      prompt: generatedPrompt.value, // Prompt speichern
+      clilElements: {
+        vocabPercentage: form.value.vocabPercentage,
+        contentFocus: form.value.contentFocus,
+        includeVocabList: form.value.includeVocabList
+      }
     };
-
     const savedMaterial = await materialsStore.addMaterial(newMaterialData);
-
+    uiStore.setLastCreatedMaterial(savedMaterial.id);
     previewDialog.value = false;
+    showFeedback('Material erfolgreich gespeichert!', 'success');
     router.push(`/edit/${savedMaterial.id}`);
   } catch (error) {
-    console.error('Error saving material:', error);
-    showError(`Fehler beim Speichern: ${error.message}`);
+    handleError(error, 'saveMaterial');
   } finally {
     saving.value = false;
   }
@@ -721,7 +746,7 @@ onMounted(async () => {
       }
     } catch (error) {
       console.error('Error loading template:', error);
-      showError('Vorlage konnte nicht geladen werden.');
+      handleError(new Error('Vorlage konnte nicht geladen werden.'));
     }
   }
 });
@@ -729,6 +754,12 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.v-stepper-header {
+  overflow: visible;
+}
+.v-stepper-item::after {
+  display: none !important;
+}
 .v-stepper-item--error .v-stepper-item__avatar {
     background-color: var(--v-theme-error) !important;
 }

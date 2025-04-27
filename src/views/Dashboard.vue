@@ -29,7 +29,7 @@
     <!-- Statistik-Übersicht -->
     <v-row class="mt-4">
       <v-col
-        v-for="(stat, index) in statsData"
+        v-for="(stat, index) in materialStats"
         :key="`stat-${index}`"
         cols="12"
         sm="6"
@@ -39,7 +39,15 @@
           <v-card-text class="pa-4 flex-grow-1">
             <div class="d-flex justify-space-between align-start">
               <div>
-                <div class="text-h4 font-weight-bold">{{ stat.value }}</div>
+                <div class="text-h4 font-weight-bold">
+                  <v-skeleton-loader
+                    v-if="loading"
+                    type="text"
+                    width="60"
+                    height="40"
+                  ></v-skeleton-loader>
+                  <template v-else>{{ stat.value }}</template>
+                </div>
                 <div class="text-subtitle-1 text-medium-emphasis">{{ stat.label }}</div>
               </div>
               <v-avatar
@@ -83,7 +91,7 @@
               >
                 <v-card
                   elevation="0"
-                  class="pa-3 text-center rounded-lg"
+                  class="pa-3 text-center rounded-lg quick-action-card"
                   :color="action.color + '-lighten-5'"
                   @click="navigateToCreate(action.type, action.templateId)"
                   hover
@@ -112,7 +120,7 @@
               :key="`recent-${material.id}`"
               :to="`/edit/${material.id}`"
               :title="material.title"
-              :subtitle="`Typ: ${material.type} | Geändert: ${material.modified}`"
+              :subtitle="`Typ: ${getMaterialTypeTitle(material.type)} | Geändert: ${material.modified}`"
             >
               <template v-slot:prepend>
                  <v-icon :color="getIconColor(material.type)">{{ getIconForType(material.type) }}</v-icon>
@@ -130,13 +138,13 @@
               </template>
             </v-list-item>
           </v-list>
-           <v-card-text v-else-if="loading" class="text-center">
-             <v-progress-circular indeterminate color="primary"></v-progress-circular>
-             <p class="mt-2">Lade Materialien...</p>
-           </v-card-text>
-           <v-card-text v-else class="text-center text-medium-emphasis">
-             Keine kürzlich bearbeiteten Materialien gefunden.
-           </v-card-text>
+          <v-card-text v-else-if="loading" class="text-center">
+            <v-progress-circular indeterminate color="primary"></v-progress-circular>
+            <p class="mt-2">Lade Materialien...</p>
+          </v-card-text>
+          <v-card-text v-else class="text-center text-medium-emphasis">
+            Keine kürzlich bearbeiteten Materialien gefunden.
+          </v-card-text>
 
           <v-card-actions v-if="!loading && recentMaterials.length > 0">
             <v-spacer></v-spacer>
@@ -160,31 +168,78 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMaterialsStore } from '@/stores/materials';
+import { useTemplatesStore } from '@/stores/templates';
+import { useUIStore } from '@/stores/ui';
+import { 
+  getIconForType, 
+  getIconColor, 
+  getMaterialTypeTitle,
+  formatDate,
+  calculateMaterialStats,
+  MATERIAL_TYPES
+} from '@/utils/materialUtils';
 
 const router = useRouter();
 const materialsStore = useMaterialsStore();
+const templatesStore = useTemplatesStore();
+const uiStore = useUIStore();
 
-// Ladezustand aus dem Store holen
-const loading = computed(() => materialsStore.loading);
+// Ladezustände
+const loading = computed(() => materialsStore.loading || templatesStore.loading);
 
-// Daten für Statistiken (Beispiel)
-const statsData = computed(() => [
-  { label: 'Materialien Gesamt', value: materialsStore.materials.length, trend: 5, color: 'primary', icon: 'mdi-folder-text-outline' },
-  { label: 'Worksheets', value: materialsStore.materialsByType['worksheet']?.length || 0, color: 'success', icon: 'mdi-file-document-outline' },
-  { label: 'Quizzes', value: materialsStore.materialsByType['quiz']?.length || 0, color: 'info', icon: 'mdi-help-circle-outline' },
-  { label: 'Favoriten', value: materialsStore.materials.filter(m => m.favorite).length, trend: -2, color: 'warning', icon: 'mdi-star-outline' },
-]);
+// Material-Statistiken
+const materialStats = computed(() => {
+  const stats = calculateMaterialStats(materialsStore.materials);
+  return [
+    { 
+      label: 'Materialien Gesamt', 
+      value: stats.total, 
+      trend: 5, 
+      color: 'primary', 
+      icon: 'mdi-folder-text-outline' 
+    },
+    ...Object.entries(MATERIAL_TYPES).map(([type, config]) => ({
+      label: config.title,
+      value: stats.byType[type] || 0,
+      color: config.color,
+      icon: config.icon
+    })),
+    { 
+      label: 'Favoriten', 
+      value: stats.favorites, 
+      trend: -2, 
+      color: 'warning', 
+      icon: 'mdi-star-outline' 
+    }
+  ];
+});
 
-// Daten für Schnellzugriff (Beispiel)
-const quickActions = ref([
-  { title: 'Leeres Worksheet', icon: 'mdi-file-document-plus-outline', type: 'worksheet', color: 'green' },
-  { title: 'Leeres Quiz', icon: 'mdi-comment-question-outline', type: 'quiz', color: 'blue' },
-  { title: 'Glossar erstellen', icon: 'mdi-book-open-page-variant-outline', type: 'glossary', color: 'orange' },
-  { title: 'Vorlage: Technik B1', icon: 'mdi-file-star-outline', type: 'worksheet', templateId: 'tpl-tech-b1', color: 'purple' },
-]);
+// QuickActions aus dem Store
+const quickActions = computed(() => {
+  const defaultActions = [
+    { title: 'Leeres Worksheet', icon: 'mdi-file-document-plus-outline', type: 'worksheet', color: 'green' },
+    { title: 'Leeres Quiz', icon: 'mdi-comment-question-outline', type: 'quiz', color: 'blue' },
+    { title: 'Glossar erstellen', icon: 'mdi-book-open-page-variant-outline', type: 'glossary', color: 'orange' }
+  ];
 
-// Kürzlich bearbeitete Materialien aus dem Store
-const recentMaterials = computed(() => materialsStore.recentMaterials);
+  const templateActions = templatesStore.recentTemplates.map(template => ({
+    title: `Vorlage: ${template.title}`,
+    icon: 'mdi-file-star-outline',
+    type: template.type,
+    templateId: template.id,
+    color: MATERIAL_TYPES[template.type]?.color || 'purple'
+  }));
+
+  return [...defaultActions, ...templateActions];
+});
+
+// Kürzlich bearbeitete Materialien mit formatiertem Datum
+const recentMaterials = computed(() => 
+  materialsStore.recentMaterials.map(material => ({
+    ...material,
+    modified: formatDate(material.modified)
+  }))
+);
 
 // Funktion zum Navigieren zur Erstellungsseite
 function navigateToCreate(type, templateId = null) {
@@ -195,29 +250,13 @@ function navigateToCreate(type, templateId = null) {
   router.push({ name: 'create', query });
 }
 
-// Hilfsfunktionen für Icons und Farben (Beispiel)
-function getIconForType(type) {
-  switch (type) {
-    case 'worksheet': return 'mdi-file-document-outline';
-    case 'quiz': return 'mdi-help-circle-outline';
-    case 'glossary': return 'mdi-book-open-variant';
-    default: return 'mdi-file-outline';
+// Materialien und Templates beim Laden der Komponente abrufen
+onMounted(async () => {
+  if (materialsStore.materials.length === 0) {
+    await materialsStore.fetchMaterials();
   }
-}
-
-function getIconColor(type) {
-  switch (type) {
-    case 'worksheet': return 'success';
-    case 'quiz': return 'info';
-    case 'glossary': return 'warning';
-    default: return 'grey';
-  }
-}
-
-// Materialien beim Laden der Komponente abrufen (falls noch nicht geschehen)
-onMounted(() => {
-  if (materialsStore.materials.length === 0) { // Nur laden, wenn Store leer ist
-    materialsStore.fetchMaterials();
+  if (templatesStore.templates.length === 0) {
+    await templatesStore.fetchTemplates();
   }
 });
 
